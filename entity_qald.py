@@ -59,7 +59,7 @@ def get_earl_entities(query):
 
     THRESHOLD = 0.1
 
-    response = requests.post('https://earldemo.sda.tech/earl/api/processQuery',
+    response = requests.post('http://ltdemos.informatik.uni-hamburg.de/earl/processQuery',
                              json={"nlquery": query, "pagerankflag": False})
 
     json_response = json.loads(response.text)
@@ -175,7 +175,7 @@ def get_spotlight_entities(query):
     }
     headers = {"Accept": "application/json"}
     try:
-        response = requests.post('http://model.dbpedia-spotlight.org/en/annotate', data=data, headers=headers)
+        response = requests.post('https://api.dbpedia-spotlight.org/en/annotate', data=data, headers=headers)
         response_json = response.text.replace('@', '')
         output = json.loads(response_json)
         if 'Resources' in output.keys():
@@ -189,7 +189,7 @@ def get_spotlight_entities(query):
                 entity['surface'] = [int(item['offset']), len(item['surfaceForm'])]
                 entities.append(entity)
     except:
-        print('Spotlight: ', query)
+        print('Spotlight error: ', query)
     return entities
 
 
@@ -295,6 +295,7 @@ if __name__ == "__main__":
         earl['entities'] = np.array(earl['entities'])
         esim = np.array(esim)
         inds = esim.argsort()[::-1]
+
         earl['entities'] = earl['entities'][inds]
 
         rsim = []
