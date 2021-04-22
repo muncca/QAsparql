@@ -30,7 +30,7 @@ from learning.treelstm.config import parse_args
 # TRAIN AND TEST HELPER FUNCTIONS
 from trainer import Trainer
 import datetime
-from fastText import load_model
+from fasttext import load_model
 
 
 def main():
