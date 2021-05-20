@@ -59,7 +59,7 @@ def get_earl_entities(query):
 
     THRESHOLD = 0.1
 
-    response = requests.post('https://earldemo.sda.tech/earl/api/processQuery',
+    response = requests.post('http://ltdemos.informatik.uni-hamburg.de/earl/processQuery',
                              json={"nlquery": query, "pagerankflag": False})
 
     json_response = json.loads(response.text)

@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from gevent.pywsgi import WSGIServer
 from collections import Counter
 from kb.dbpedia import DBpedia
 from learning.classifier.svmclassifier import SVMClassifier
@@ -22,6 +23,7 @@ import torch.nn as nn
 import torch.optim as optim
 import itertools
 import numpy as np
+import logging
 
 app = Flask(__name__)
 
@@ -293,3 +295,10 @@ def create_entity_relations_combinations():
 
     combination_list = [(x, y) for x in entity_list for y in relation_list]
     return combination_list
+
+if __name__ == '__main__':
+    logger = logging.getLogger(__name__)
+
+    logger.info("Starting the HTTP server")
+    http_server = WSGIServer(('', 9011), app)
+    http_server.serve_forever()
