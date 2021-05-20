@@ -16,6 +16,7 @@ from common.graph.graph import Graph
 from common.query.querybuilder import QueryBuilder
 from parser.answerparser import AnswerParser
 from parser.qald import QaldParser
+from parser.lc_quad import LC_QaudParser
 
 import os
 import torch
@@ -24,6 +25,8 @@ import torch.optim as optim
 import itertools
 import numpy as np
 import logging
+import learning.treelstm.preprocess_lcquad as preprocess_lcquad
+import ujson
 
 app = Flask(__name__)
 
@@ -38,6 +41,14 @@ double_relation_classifier = SVMClassifier(os.path.join(double_relation_classifi
 kb = DBpedia()
 answer_parser = AnswerParser(kb)
 qald_parser = QaldParser()
+parser = LC_QaudParser()
+
+dep_tree_cache_file_path = './caches/dep_tree_cache_lcquadtest.json'
+if os.path.exists(dep_tree_cache_file_path):
+    with open(dep_tree_cache_file_path) as f:
+        dep_tree_cache = ujson.load(f)
+else:
+    dep_tree_cache = dict()
 
 
 @app.route('/api/query', methods=['GET', 'POST'])
@@ -129,7 +140,7 @@ def generate_query(question, question_type, entities, relations, ask_query=False
     base_path = "./learning/treelstm/"
     args.save = os.path.join(base_path, "checkpoints/")
     #args.expname = "lc_quad,epoch=5,train_loss=0.08340245485305786"
-    args.expname = "lc_quad"
+    args.expname = "lc_quad,epoch=15,train_loss=0.09691771119832993"
     args.mem_dim = 150
     args.hidden_dim = 50
     args.num_classes = 2
@@ -143,7 +154,6 @@ def generate_query(question, question_type, entities, relations, ask_query=False
     try:
         scores = rank(args, question, valid_walks)
     except FileNotFoundError as error:
-        print("except: check ranking.......................................")
         print(error)
         scores = [1 for _ in valid_walks]
     for idx, item in enumerate(valid_walks):
@@ -152,7 +162,6 @@ def generate_query(question, question_type, entities, relations, ask_query=False
         else:
             item["confidence"] = float(scores[idx] - 1)
 
-    print(valid_walks)
     return valid_walks
 
 
@@ -194,8 +203,6 @@ def postprocess(generated_queries, count_query, ask_query):
 
     for idx in range(len(sorted_queries)):
         where = sorted_queries[idx]
-        print("WHERE")
-        print(where)
 
         if "answer" in where:
             answerset = where["answer"]
@@ -220,8 +227,6 @@ def rank(args, question, generated_queries):
         checkpoint_filename = '%s.pt' % os.path.join(args.save, args.expname)
         dataset_vocab_file = os.path.join(args.data, 'dataset.vocab')
         # metrics = Metrics(args.num_classes)
-        print("RANKING")
-        print(dataset_vocab_file)
         vocab = Vocab(filename=dataset_vocab_file,
                       data=[Constants.PAD_WORD, Constants.UNK_WORD, Constants.BOS_WORD, Constants.EOS_WORD])
         similarity = DASimilarity(args.mem_dim, args.hidden_dim, args.num_classes)
@@ -235,14 +240,9 @@ def rank(args, question, generated_queries):
         optimizer = optim.Adagrad(model.parameters(), lr=args.lr, weight_decay=args.wd)
         emb_file = os.path.join(args.data, 'dataset_embed.pth')
 
-        print("DATASET_EMBBED")
-        print(emb_file)
-
         if os.path.isfile(emb_file):
             emb = torch.load(emb_file)
         model.emb.weight.data.copy_(emb)
-        print("CHECKPOINT FILE")
-        print(checkpoint_filename)
         checkpoint = torch.load(checkpoint_filename, map_location=lambda storage, loc: storage)
         model.load_state_dict(checkpoint['model'])
         trainer = Trainer(args, model, criterion, optimizer)
@@ -252,13 +252,11 @@ def rank(args, question, generated_queries):
                       "generated_queries": [{"query": " .".join(query["where"]), "correct": False} for query in
                                             generated_queries]}]
         output_dir = "./output/qald"
-        print("SAVE SPLIT")        
-        preprocess_lcquad.save_split(output_dir, *preprocess_lcquad.split(json_data, self.parser))
-        print("AFTER SAVE SPLIT")
-        if question in self.dep_tree_cache:
+        preprocess_lcquad.save_split(output_dir, *preprocess_lcquad.split(json_data, parser))
+        if question in dep_tree_cache:
             preprocess_lcquad.parse(output_dir, dep_parse=False)
 
-            cache_item = self.dep_tree_cache[question]
+            cache_item = dep_tree_cache[question]
             with open(os.path.join(output_dir, 'a.parents'), 'w') as f_parent, open(
                     os.path.join(output_dir, 'a.toks'), 'w') as f_token:
                 for i in range(len(generated_queries)):
@@ -270,12 +268,11 @@ def rank(args, question, generated_queries):
                 parents = f.readline()
             with open(os.path.join(output_dir, 'a.toks')) as f:
                 tokens = f.readline()
-            self.dep_tree_cache[question] = [tokens, parents]
+            dep_tree_cache[question] = [tokens, parents]
 
-            with open(self.dep_tree_cache_file_path, 'w') as f:
-                ujson.dump(self.dep_tree_cache, f)
+            with open(dep_tree_cache_file_path, 'w') as f:
+                ujson.dump(dep_tree_cache, f)
         test_dataset = QGDataset(output_dir, vocab, args.num_classes)
-        print("NEVER ENDING")
         test_loss, test_pred = trainer.test(test_dataset)
         return test_pred
 
