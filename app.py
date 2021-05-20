@@ -80,23 +80,18 @@ def query():
     generated_queries = generate_query(question, question_type, entities, relations, count_query, ask_query)
     queries = postprocess(generated_queries, count_query, ask_query)
 
+    question = {
+        "type": get_question_type_text(question_type),
+        "type_confidence": type_confidence
+    }
+
     return jsonify(
-        question_type=question_type,
-        type_confidence=type_confidence,
+        question=question,
         queries=queries
     )
 
-
 def get_question_type(question):
     question_type = question_type_classifier.predict([question])
-
-    question_type_text = "DEFAULT"
-
-    if question_type == 2:
-        question_type_text = "COUNT"
-    elif question_type == 1:
-        question_type_text = "ASK"
-
     type_confidence = question_type_classifier.predict_proba([question])[0][question_type]
 
     if isinstance(question_type_classifier.predict_proba([question])[0][question_type], (np.ndarray, list)):
@@ -107,6 +102,13 @@ def get_question_type(question):
 
     return question_type, type_confidence
 
+def get_question_type_text(question_type):
+    question_type_text = "LIST"
+    if question_type == 2:
+        question_type_text = "COUNT"
+    elif question_type == 1:
+        question_type_text = "BOOLEAN"
+    return question_type_text
 
 def generate_query(question, question_type, entities, relations, ask_query=False, count_query=False):
     sort_query = False
@@ -213,8 +215,11 @@ def postprocess(generated_queries, count_query, ask_query):
             answerset = AnswerSet(raw_answer, answer_parser.parse_queryresult)
 
         output_where[idx]["target_var"] = target_var
-        """sparql = SPARQL(kb.sparql_query(where["where"], target_var, count_query, ask_query), qald_parser.parse_sparql)"""
-        queries.append(kb.sparql_query(where["where"], target_var, count_query, ask_query))
+        query = {
+            "query": kb.sparql_query(where["where"], target_var, count_query, ask_query),
+            "confidence": where["confidence"]
+        }
+        queries.append(query)
 
     return queries
 
