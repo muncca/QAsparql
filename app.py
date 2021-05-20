@@ -51,23 +51,23 @@ else:
     dep_tree_cache = dict()
 
 
-@app.route('/api/query', methods=['GET', 'POST'])
+@app.route('/api/query', methods=['POST'])
 def query():
-    content = request.json
-    # question = content['text']
-    question = "List all the musicals with music by Elton John."
+    question = request.json['question']
+    raw_entities = request.json['entities']
+    raw_relations = request.json['relations']
+
+    entities = []
+    for item in raw_entities:
+        uris = [Uri(uri["uri"], DBpedia.parse_uri, uri["confidence"]) for uri in item["uris"]]
+        entities.append(LinkedItem(item["surface"], uris))
+
+    relations = []
+    for item in raw_relations:
+        uris = [Uri(uri["uri"], DBpedia.parse_uri, uri["confidence"]) for uri in item["uris"]]        
+        relations.append(LinkedItem(item["surface"], uris))
 
     question_type, type_confidence = get_question_type(question)
-
-    top = 50
-    uris = []
-    uris.append(Uri("<http://dbpedia.org/resource/Elton_John>", DBpedia.parse_uri, 1.0))
-    entities = [LinkedItem("Elton John", uris[:top])]  # [..., ...]
-
-    uris = []
-    uris.append(Uri("<http://dbpedia.org/ontology/Musical>", DBpedia.parse_uri, 1.0))
-    uris.append(Uri("<http://dbpedia.org/ontology/musicBy>", DBpedia.parse_uri, 0.3))
-    relations = [LinkedItem("musicals", uris[:top])]
 
     count_query = False
     ask_query = False
