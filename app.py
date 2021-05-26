@@ -27,6 +27,7 @@ import numpy as np
 import logging
 import learning.treelstm.preprocess_lcquad as preprocess_lcquad
 import ujson
+import argparse
 
 app = Flask(__name__)
 
@@ -299,6 +300,10 @@ def create_entity_relations_combinations():
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)
 
+    parser = argparse.ArgumentParser(description='QASparql')
+    parser.add_argument("--port", help="port", default=9011, type=int, dest="port")
+    args = parser.parse_args()
+
     logger.info("Starting the HTTP server")
-    http_server = WSGIServer(('', 9011), app)
+    http_server = WSGIServer(('', args.port), app)
     http_server.serve_forever()
