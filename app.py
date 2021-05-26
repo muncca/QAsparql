@@ -80,15 +80,13 @@ def query():
     generated_queries = generate_query(question, question_type, entities, relations, count_query, ask_query)
     queries = postprocess(generated_queries, count_query, ask_query)
 
-    question = {
+    result = {
+        "queries": queries,
         "type": get_question_type_text(question_type),
         "type_confidence": type_confidence
     }
 
-    return jsonify(
-        question=question,
-        queries=queries
-    )
+    return jsonify(result)
 
 def get_question_type(question):
     question_type = question_type_classifier.predict([question])
@@ -103,11 +101,11 @@ def get_question_type(question):
     return question_type, type_confidence
 
 def get_question_type_text(question_type):
-    question_type_text = "LIST"
+    question_type_text = "list"
     if question_type == 2:
-        question_type_text = "COUNT"
+        question_type_text = "count"
     elif question_type == 1:
-        question_type_text = "BOOLEAN"
+        question_type_text = "boolean"
     return question_type_text
 
 def generate_query(question, question_type, entities, relations, ask_query=False, count_query=False):
@@ -207,12 +205,12 @@ def postprocess(generated_queries, count_query, ask_query):
         where = sorted_queries[idx]
 
         if "answer" in where:
-            answerset = where["answer"]
+            #answerset = where["answer"]
             target_var = where["target_var"]
         else:
             target_var = "?u_" + str(where["suggested_id"])
-            raw_answer = kb.query_where(where["where"], target_var, count_query, ask_query)
-            answerset = AnswerSet(raw_answer, answer_parser.parse_queryresult)
+            #raw_answer = kb.query_where(where["where"], target_var, count_query, ask_query)
+            #answerset = AnswerSet(raw_answer, answer_parser.parse_queryresult)
 
         output_where[idx]["target_var"] = target_var
         query = {
