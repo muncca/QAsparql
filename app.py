@@ -79,7 +79,7 @@ def query():
 
     combination_mode = True
     if combination_mode:
-        combination_list = create_entity_relations_combinations()
+        combination_list = create_entity_relations_combinations(entities, relations)
         for comb in combination_list:
             print("Combination")
             print(comb)
@@ -291,7 +291,7 @@ def rank(args, question, generated_queries):
         return test_pred
 
 
-def create_entity_relations_combinations():
+def create_entity_relations_combinations(entities, relations):
     entity_list = []
     for L in range(1, len(entities) + 1):
         for subset in itertools.combinations(entities, L):
@@ -299,8 +299,8 @@ def create_entity_relations_combinations():
     entity_list = entity_list[::-1]
 
     relation_list = []
-    for L in range(1, len(ontologies) + 1):
-        for subset in itertools.combinations(ontologies, L):
+    for L in range(1, len(relations) + 1):
+        for subset in itertools.combinations(relations, L):
             relation_list.append(subset)
     relation_list = relation_list[::-1]
 
