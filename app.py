@@ -77,12 +77,11 @@ def query():
     elif question_type == 1:
         ask_query = True
 
+    generated_queries = []
     combination_mode = True
     if combination_mode:
         combination_list = create_entity_relations_combinations(entities, relations)
         for comb in combination_list:
-            print("Combination")
-            print(comb)
             # why did Sylvia Liang just generates query if none exists?
             #if len(generated_queries) == 0:
             generated_queries.extend(generate_query(question, question_type, comb[0], comb[1], count_query, ask_query))
